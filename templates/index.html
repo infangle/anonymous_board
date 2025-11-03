@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Anonymous Threads</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 p-6">
+  <div class="max-w-3xl mx-auto">
+
+    <!-- Header -->
+    <h1 class="text-3xl font-bold mb-6 text-center text-gray-800">
+      🧩 Anonymous Threads
+    </h1>
+
+    <!-- Popular Threads -->
+    <div class="mb-6 p-4 bg-yellow-50 rounded-lg border border-yellow-200 shadow-sm">
+      <h2 class="text-xl font-semibold mb-3 text-yellow-800">🔥 Popular Threads</h2>
+      {% if popular_threads %}
+        <ul class="list-disc ml-6">
+          {% for thread in popular_threads %}
+            <li class="mb-1">
+              <a href="/thread/{{ thread[0] }}" class="text-blue-600 hover:underline">
+                {{ thread[1] }}
+              </a>
+              <span class="text-gray-500 text-sm">
+                (⬆ {{ thread[4] }} | ⬇ {{ thread[5] }})
+              </span>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="text-gray-500 text-sm">No popular threads yet.</p>
+      {% endif %}
+    </div>
+
+    <!-- Trending Tags -->
+    <div class="mb-6 p-4 bg-green-50 rounded-lg border border-green-200 shadow-sm">
+      <h2 class="text-xl font-semibold mb-3 text-green-800">🏷️ Trending Tags</h2>
+      <div class="flex flex-wrap gap-2">
+        {% if trending_tags %}
+          {% for tag in trending_tags %}
+            <a href="/tag/{{ tag }}" class="text-green-700 bg-green-100 px-2 py-1 rounded hover:bg-green-200 transition">
+              #{{ tag }}
+            </a>
+          {% endfor %}
+        {% else %}
+          <p class="text-gray-500 text-sm">No trending tags yet.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Search Bar -->
+    <form action="/search" method="get" class="mb-6 flex shadow-sm">
+      <input type="text" name="q" placeholder="Search threads..." 
+             class="flex-grow border border-gray-300 rounded-l px-3 py-2 focus:outline-none focus:ring focus:ring-blue-300" 
+             required>
+      <button type="submit" class="bg-blue-600 text-white px-4 rounded-r hover:bg-blue-700 transition">
+        🔍
+      </button>
+    </form>
+
+    <!-- New Thread Button -->
+    <div class="text-right mb-6">
+      <a href="/new" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 shadow transition">
+        + New Thread
+      </a>
+    </div>
+
+    <!-- Thread List -->
+    {% if threads %}
+      {% for thread in threads %}
+        <div class="bg-white p-5 mb-5 shadow rounded-lg border border-gray-200 hover:shadow-md transition">
+          <!-- Title -->
+          <h2 class="text-xl font-semibold mb-1">
+            <a href="/thread/{{ thread[0] }}" class="hover:underline text-blue-700">
+              {{ thread[1] }}
+            </a>
+          </h2>
+
+          <!-- Content preview -->
+          <p class="text-gray-700 mt-1">
+            {{ thread[2][:300] }}{% if thread[2]|length > 300 %}...{% endif %}
+          </p>
+
+          <!-- Metadata -->
+          <small class="text-gray-500 block mt-2">
+            Posted at {{ thread[3] }}
+          </small>
+
+          <!-- Votes -->
+          <div class="mt-3 flex space-x-4 text-sm font-medium">
+            <a href="/upvote/{{ thread[0] }}" class="text-green-600 hover:text-green-800 transition">
+              ⬆ {{ thread[4] }}
+            </a>
+            <a href="/downvote/{{ thread[0] }}" class="text-red-600 hover:text-red-800 transition">
+              ⬇ {{ thread[5] }}
+            </a>
+          </div>
+
+          <!-- Tags -->
+          {% if thread[6] %}
+          <div class="mt-3 flex flex-wrap gap-2">
+            {% for tag in thread[6].split(',') %}
+              {% set t = tag.strip() %}
+              {% if t %}
+                <a href="/tag/{{ t }}" class="text-blue-600 hover:underline">#{{ t }}</a>
+              {% endif %}
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    {% else %}
+      <p class="text-center text-gray-500">No threads yet. Be the first to post!</p>
+    {% endif %}
+
+    <!-- Pagination -->
+    {% if total_pages > 1 %}
+      <div class="flex justify-center space-x-3 mt-6">
+        {% if page > 1 %}
+          <a href="/?page={{ page - 1 }}" class="text-blue-600 hover:underline">← Prev</a>
+        {% endif %}
+        <span class="text-gray-700">Page {{ page }} of {{ total_pages }}</span>
+        {% if page < total_pages %}
+          <a href="/?page={{ page + 1 }}" class="text-blue-600 hover:underline">Next →</a>
+        {% endif %}
+      </div>
+    {% endif %}
+
+  </div>
+</body>
+</html>

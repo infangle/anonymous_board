@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ thread[1] }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 p-6">
+  <div class="max-w-3xl mx-auto">
+
+    <!-- Thread Header -->
+    <div class="bg-white p-5 rounded-lg shadow mb-6 border border-gray-200">
+      <h1 class="text-2xl font-bold text-gray-800 mb-3">{{ thread[1] }}</h1>
+      <p class="text-gray-700 mb-3 whitespace-pre-line">{{ thread[2] }}</p>
+      <small class="text-gray-500 block mb-2">
+        Posted at {{ thread[3] }}
+      </small>
+
+      <!-- Tags -->
+      {% if thread[6] %}
+      <div class="mb-3 flex flex-wrap gap-2">
+        {% for tag in thread[6].split(',') %}
+          {% set t = tag.strip() %}
+          {% if t %}
+            <a href="/tag/{{ t }}" class="text-blue-600 hover:underline">#{{ t }}</a>
+          {% endif %}
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- Votes -->
+      <div class="flex space-x-4 text-sm font-medium mt-2">
+        <a href="/upvote/{{ thread[0] }}" 
+           class="text-green-600 hover:text-green-800 transition">⬆ {{ thread[4] }}</a>
+        <a href="/downvote/{{ thread[0] }}" 
+           class="text-red-600 hover:text-red-800 transition">⬇ {{ thread[5] }}</a>
+      </div>
+    </div>
+
+    <!-- Comments Section -->
+    <div class="mb-6">
+      <h2 class="text-xl font-semibold mb-3 text-gray-800">💬 Comments</h2>
+
+      {% if comments %}
+        {% for comment in comments %}
+          <div class="bg-white p-4 mb-3 rounded-lg shadow-sm border border-gray-200">
+            <p class="text-gray-800">{{ comment[2] }}</p>
+            <div class="mt-2 flex items-center justify-between text-sm">
+              <small class="text-gray-500">Posted at {{ comment[3] }}</small>
+              <div class="flex space-x-4">
+                <a href="/comment/upvote/{{ comment[0] }}" class="text-green-600 hover:text-green-800">⬆ {{ comment[4] }}</a>
+                <a href="/comment/downvote/{{ comment[0] }}" class="text-red-600 hover:text-red-800">⬇ {{ comment[5] }}</a>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <p class="text-gray-500">No comments yet. Be the first to start a “what if”! 🧠</p>
+      {% endif %}
+    </div>
+
+    <!-- Comment Rules -->
+    <div class="mb-5 p-4 bg-gray-50 rounded-lg border border-gray-200">
+      <p class="text-gray-700 text-sm">
+        <strong>Comment Rules:</strong> Keep it creative — build on the story or “what ifs.”  
+        Max <strong>150 words</strong>. Be respectful and imaginative.
+      </p>
+    </div>
+
+    <!-- New Comment Form -->
+    <form method="POST" class="bg-white p-4 rounded-lg shadow border border-gray-200">
+      <textarea id="commentBox" name="content" 
+                placeholder="Add your idea… start with 'What if…'" 
+                class="w-full border rounded p-2 focus:outline-none focus:ring focus:ring-blue-200" 
+                rows="4" required></textarea>
+      <div id="wordCount" class="text-gray-500 text-sm mt-1 mb-3">0 / 150 words</div>
+      <button type="submit" 
+              class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+        Post Comment
+      </button>
+    </form>
+
+    <!-- Back Link -->
+    <div class="mt-6 text-center">
+      <a href="/" class="text-blue-600 hover:underline">← Back to Threads</a>
+    </div>
+  </div>
+
+  <!-- JS: Word Counter + 'What if' Prefill -->
+  <script>
+    const commentBox = document.getElementById('commentBox');
+    const wordCount = document.getElementById('wordCount');
+    const maxWords = 150;
+
+    // Prefill "What if " when user first focuses
+    let prefilled = false;
+    commentBox.addEventListener('focus', () => {
+      if (!prefilled && !commentBox.value.trim()) {
+        commentBox.value = "What if ";
+        prefilled = true;
+        updateWordCount();
+      }
+    });
+
+    commentBox.addEventListener('input', updateWordCount);
+
+    function updateWordCount() {
+      const words = commentBox.value.trim().split(/\s+/).filter(w => w.length > 0);
+      wordCount.textContent = `${words.length} / ${maxWords} words`;
+      wordCount.classList.toggle('text-red-600', words.length > maxWords);
+    }
+  </script>
+</body>
+</html>

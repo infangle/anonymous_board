@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>New Thread - Anonymous Threads</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 p-6">
+  <div class="max-w-2xl mx-auto">
+    <h1 class="text-3xl font-bold mb-4 text-center">+ New Thread</h1>
+
+    <!-- Guidelines box -->
+    <div class="mb-4 p-3 bg-gray-100 rounded border">
+      <p class="text-gray-700 text-sm">
+        Rules: Keep it creative. Respect others. Max 500 words per thread. No spam, no personal attacks, no illegal content. Add tags separated by commas (optional).
+      </p>
+    </div>
+
+    <form method="POST">
+      <!-- Title -->
+      <input type="text" name="title" placeholder="Thread title" class="w-full border p-2 mb-3 rounded" required>
+
+      <!-- Content with live word counter -->
+      <textarea id="threadContent" name="content" 
+                placeholder="Start your story or delulu idea with 'What if…'..." 
+                class="w-full border p-2 mb-2 rounded" rows="8" required></textarea>
+      <div id="wordCount" class="text-gray-500 text-sm mb-3">0 / 500 words</div>
+
+      <!-- Tags input -->
+      <input type="text" name="tags" placeholder="Tags (comma-separated)" class="w-full border p-2 mb-3 rounded">
+
+      <div class="flex justify-between">
+        <a href="/" class="text-blue-600">← Back</a>
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Post Thread</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- JavaScript for live word count and "What if..." prompt -->
+  <script>
+    const threadContent = document.getElementById('threadContent');
+    const wordCount = document.getElementById('wordCount');
+    const maxWords = 500;
+
+    // Prefill "What if" when focus is first triggered
+    threadContent.addEventListener('focus', () => {
+      if (!threadContent.value) {
+        threadContent.value = "What if ";
+        wordCount.textContent = `2 / ${maxWords} words`; // "What if" counts as 2 words
+      }
+    });
+
+    // Live word count
+    threadContent.addEventListener('input', () => {
+      const words = threadContent.value.trim().split(/\s+/).filter(w => w.length > 0);
+      wordCount.textContent = `${words.length} / ${maxWords} words`;
+    });
+  </script>
+</body>
+</html>
