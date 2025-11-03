@@ -1,43 +1,49 @@
-from flask import Flask, render_template, request, redirect, url_for
-import sqlite3
+import os
+import psycopg2
+from flask import Flask, render_template, request, redirect
 from datetime import datetime
-import math
 
 app = Flask(__name__)
 
+# Get database URL from environment variables (set by Render)
+DATABASE_URL = os.environ.get('DATABASE_URL')
+
+def get_conn():
+    return psycopg2.connect(DATABASE_URL)
+
 # --- Database Setup ---
 def init_db():
-    conn = sqlite3.connect('threads.db')
+    conn = get_conn()
     c = conn.cursor()
-
+    
     # Threads table
     c.execute('''
     CREATE TABLE IF NOT EXISTS threads (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         title TEXT NOT NULL,
         content TEXT NOT NULL,
-        created_at TEXT NOT NULL,
+        created_at TIMESTAMP NOT NULL,
         upvotes INTEGER DEFAULT 0,
         downvotes INTEGER DEFAULT 0,
         tags TEXT DEFAULT ''
     )
     ''')
-
+    
     # Comments table
     c.execute('''
     CREATE TABLE IF NOT EXISTS comments (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        thread_id INTEGER NOT NULL,
+        id SERIAL PRIMARY KEY,
+        thread_id INTEGER NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
         content TEXT NOT NULL,
-        created_at TEXT NOT NULL,
+        created_at TIMESTAMP NOT NULL,
         upvotes INTEGER DEFAULT 0,
-        downvotes INTEGER DEFAULT 0,
-        FOREIGN KEY(thread_id) REFERENCES threads(id)
+        downvotes INTEGER DEFAULT 0
     )
     ''')
-
+    
     conn.commit()
     conn.close()
+
 
 
 # --- Word Limits ---
