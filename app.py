@@ -183,9 +183,25 @@ def comment_downvote(comment_id):
 # --- Tag Filter ---
 @app.route('/tag/<tag>')
 def tag_filter(tag):
+    page = int(request.args.get('page', 1))
+    per_page = 5
+    offset = (page - 1) * per_page
+
     conn = get_conn()
     c = conn.cursor()
-    c.execute("SELECT * FROM threads WHERE tags ILIKE %s", (f'%{tag}%',))
+
+    # Count total threads for this tag
+    c.execute("SELECT COUNT(*) FROM threads WHERE tags ILIKE %s", ('%' + tag + '%',))
+    total_threads = c.fetchone()[0]
+    total_pages = math.ceil(total_threads / per_page)
+
+    # Fetch threads for this page
+    c.execute("""
+        SELECT * FROM threads
+        WHERE tags ILIKE %s
+        ORDER BY id DESC
+        LIMIT %s OFFSET %s
+    """, ('%' + tag + '%', per_page, offset))
     threads = c.fetchall()
     conn.close()
 
@@ -197,22 +213,36 @@ def tag_filter(tag):
         threads=threads,
         popular_threads=popular_threads,
         trending_tags=trending_tags,
-        page=1,
-        total_pages=1
+        page=page,
+        total_pages=total_pages
     )
-
 
 # --- Search Threads ---
 @app.route('/search')
 def search():
     query = request.args.get('q', '').strip()
+    page = int(request.args.get('page', 1))
+    per_page = 5
+    offset = (page - 1) * per_page
+
     conn = get_conn()
     c = conn.cursor()
+
+    # Count total results
+    c.execute("""
+        SELECT COUNT(*) FROM threads
+        WHERE title ILIKE %s OR content ILIKE %s OR tags ILIKE %s
+    """, (f'%{query}%', f'%{query}%', f'%{query}%'))
+    total_threads = c.fetchone()[0]
+    total_pages = math.ceil(total_threads / per_page)
+
+    # Fetch results for current page
     c.execute("""
         SELECT * FROM threads
         WHERE title ILIKE %s OR content ILIKE %s OR tags ILIKE %s
         ORDER BY id DESC
-    """, (f'%{query}%', f'%{query}%', f'%{query}%'))
+        LIMIT %s OFFSET %s
+    """, (f'%{query}%', f'%{query}%', f'%{query}%', per_page, offset))
     results = c.fetchall()
     conn.close()
 
@@ -224,8 +254,8 @@ def search():
         threads=results,
         popular_threads=popular_threads,
         trending_tags=trending_tags,
-        page=1,
-        total_pages=1
+        page=page,
+        total_pages=total_pages
     )
 
 
