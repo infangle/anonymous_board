@@ -1,12 +1,13 @@
 import os
+import math
 import psycopg2
 from flask import Flask, render_template, request, redirect
 from datetime import datetime
 
 app = Flask(__name__)
 
-# Get database URL from environment variables (set by Render)
-DATABASE_URL = os.environ.get('DATABASE_URL')
+# --- Database Connection ---
+DATABASE_URL = os.environ.get('DATABASE_URL')  # set on Render
 
 def get_conn():
     return psycopg2.connect(DATABASE_URL)
@@ -45,7 +46,6 @@ def init_db():
     conn.close()
 
 
-
 # --- Word Limits ---
 MAX_THREAD_WORDS = 500
 MAX_COMMENT_WORDS = 150
@@ -61,14 +61,14 @@ def index():
     per_page = 5
     offset = (page - 1) * per_page
 
-    conn = sqlite3.connect('threads.db')
+    conn = get_conn()
     c = conn.cursor()
     c.execute('SELECT COUNT(*) FROM threads')
     total_threads = c.fetchone()[0]
 
     total_pages = math.ceil(total_threads / per_page)
 
-    c.execute('SELECT * FROM threads ORDER BY id DESC LIMIT ? OFFSET ?', (per_page, offset))
+    c.execute('SELECT * FROM threads ORDER BY id DESC LIMIT %s OFFSET %s', (per_page, offset))
     threads = c.fetchall()
     conn.close()
 
@@ -96,11 +96,11 @@ def new_thread():
         if count_words(content) > MAX_THREAD_WORDS:
             return f"Thread too long! Max {MAX_THREAD_WORDS} words.", 400
 
-        conn = sqlite3.connect('threads.db')
+        conn = get_conn()
         c = conn.cursor()
         c.execute(
-            'INSERT INTO threads (title, content, created_at, tags) VALUES (?, ?, ?, ?)',
-            (title, content, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), tags)
+            'INSERT INTO threads (title, content, created_at, tags) VALUES (%s, %s, %s, %s)',
+            (title, content, datetime.now(), tags)
         )
         conn.commit()
         conn.close()
@@ -111,7 +111,7 @@ def new_thread():
 # --- Thread Detail + Comments ---
 @app.route('/thread/<int:thread_id>', methods=['GET', 'POST'])
 def thread_detail(thread_id):
-    conn = sqlite3.connect('threads.db')
+    conn = get_conn()
     c = conn.cursor()
 
     if request.method == 'POST':
@@ -119,16 +119,15 @@ def thread_detail(thread_id):
         if count_words(content) > MAX_COMMENT_WORDS:
             return f"Comment too long! Max {MAX_COMMENT_WORDS} words.", 400
         c.execute(
-            'INSERT INTO comments (thread_id, content, created_at) VALUES (?, ?, ?)',
-            (thread_id, content, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            'INSERT INTO comments (thread_id, content, created_at) VALUES (%s, %s, %s)',
+            (thread_id, content, datetime.now())
         )
         conn.commit()
 
-    c.execute('SELECT * FROM threads WHERE id = ?', (thread_id,))
+    c.execute('SELECT * FROM threads WHERE id = %s', (thread_id,))
     thread = c.fetchone()
-    c.execute('SELECT * FROM comments WHERE thread_id = ? ORDER BY id ASC', (thread_id,))
+    c.execute('SELECT * FROM comments WHERE thread_id = %s ORDER BY id ASC', (thread_id,))
     comments = c.fetchall()
-
     conn.close()
     return render_template('thread_detail.html', thread=thread, comments=comments)
 
@@ -136,9 +135,9 @@ def thread_detail(thread_id):
 # --- Voting ---
 @app.route('/upvote/<int:thread_id>')
 def upvote(thread_id):
-    conn = sqlite3.connect('threads.db')
+    conn = get_conn()
     c = conn.cursor()
-    c.execute('UPDATE threads SET upvotes = upvotes + 1 WHERE id = ?', (thread_id,))
+    c.execute('UPDATE threads SET upvotes = upvotes + 1 WHERE id = %s', (thread_id,))
     conn.commit()
     conn.close()
     return redirect(request.referrer or '/')
@@ -146,9 +145,9 @@ def upvote(thread_id):
 
 @app.route('/downvote/<int:thread_id>')
 def downvote(thread_id):
-    conn = sqlite3.connect('threads.db')
+    conn = get_conn()
     c = conn.cursor()
-    c.execute('UPDATE threads SET downvotes = downvotes + 1 WHERE id = ?', (thread_id,))
+    c.execute('UPDATE threads SET downvotes = downvotes + 1 WHERE id = %s', (thread_id,))
     conn.commit()
     conn.close()
     return redirect(request.referrer or '/')
@@ -156,9 +155,9 @@ def downvote(thread_id):
 
 @app.route('/comment/upvote/<int:comment_id>')
 def comment_upvote(comment_id):
-    conn = sqlite3.connect('threads.db')
+    conn = get_conn()
     c = conn.cursor()
-    c.execute('UPDATE comments SET upvotes = upvotes + 1 WHERE id = ?', (comment_id,))
+    c.execute('UPDATE comments SET upvotes = upvotes + 1 WHERE id = %s', (comment_id,))
     conn.commit()
     conn.close()
     return redirect(request.referrer or '/')
@@ -166,9 +165,9 @@ def comment_upvote(comment_id):
 
 @app.route('/comment/downvote/<int:comment_id>')
 def comment_downvote(comment_id):
-    conn = sqlite3.connect('threads.db')
+    conn = get_conn()
     c = conn.cursor()
-    c.execute('UPDATE comments SET downvotes = downvotes + 1 WHERE id = ?', (comment_id,))
+    c.execute('UPDATE comments SET downvotes = downvotes + 1 WHERE id = %s', (comment_id,))
     conn.commit()
     conn.close()
     return redirect(request.referrer or '/')
@@ -177,9 +176,9 @@ def comment_downvote(comment_id):
 # --- Tag Filter ---
 @app.route('/tag/<tag>')
 def tag_filter(tag):
-    conn = sqlite3.connect('threads.db')
+    conn = get_conn()
     c = conn.cursor()
-    c.execute("SELECT * FROM threads WHERE tags LIKE ?", ('%' + tag + '%',))
+    c.execute("SELECT * FROM threads WHERE tags ILIKE %s", (f'%{tag}%',))
     threads = c.fetchall()
     conn.close()
 
@@ -200,11 +199,11 @@ def tag_filter(tag):
 @app.route('/search')
 def search():
     query = request.args.get('q', '').strip()
-    conn = sqlite3.connect('threads.db')
+    conn = get_conn()
     c = conn.cursor()
     c.execute("""
         SELECT * FROM threads
-        WHERE title LIKE ? OR content LIKE ? OR tags LIKE ?
+        WHERE title ILIKE %s OR content ILIKE %s OR tags ILIKE %s
         ORDER BY id DESC
     """, (f'%{query}%', f'%{query}%', f'%{query}%'))
     results = c.fetchall()
@@ -225,18 +224,18 @@ def search():
 
 # --- Helpers ---
 def get_popular_threads(limit=5):
-    conn = sqlite3.connect('threads.db')
+    conn = get_conn()
     c = conn.cursor()
-    c.execute('SELECT * FROM threads ORDER BY (upvotes - downvotes) DESC LIMIT ?', (limit,))
+    c.execute('SELECT * FROM threads ORDER BY (upvotes - downvotes) DESC LIMIT %s', (limit,))
     threads = c.fetchall()
     conn.close()
     return threads
 
 
 def get_trending_tags(limit=10):
-    conn = sqlite3.connect('threads.db')
+    conn = get_conn()
     c = conn.cursor()
-    c.execute('SELECT tags FROM threads WHERE tags != ""')
+    c.execute('SELECT tags FROM threads WHERE tags != \'\'')
     all_tags = c.fetchall()
     conn.close()
 
