@@ -63,13 +63,20 @@ def index():
 
     conn = get_conn()
     c = conn.cursor()
+
+    # Count total threads for pagination
     c.execute('SELECT COUNT(*) FROM threads')
     total_threads = c.fetchone()[0]
-
     total_pages = math.ceil(total_threads / per_page)
 
-    c.execute('SELECT * FROM threads ORDER BY id DESC LIMIT %s OFFSET %s', (per_page, offset))
+    # Fetch threads for the current page
+    c.execute('''
+        SELECT * FROM threads
+        ORDER BY id DESC
+        LIMIT %s OFFSET %s
+    ''', (per_page, offset))
     threads = c.fetchall()
+
     conn.close()
 
     popular_threads = get_popular_threads()
